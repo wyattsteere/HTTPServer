@@ -1,12 +1,15 @@
 package org.example;
 
-import java.io.;
-import java.net.;
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.*;
+import java.net.*;
 
 public class HTTPServer {
     private static String[] requestParts;
     private static BufferedReader in;
     private static int fileLength;
+    private static BufferedImage image;
 
     public static void main(String[] args) throws IOException {
         ServerSocket serverSocket = new ServerSocket(8080);
@@ -14,7 +17,7 @@ public class HTTPServer {
         while (true) {
             Socket clientSocket = serverSocket.accept();
 
-            new Thread(() - {
+            new Thread(() -> {
                 try {
                     handleRequest(clientSocket);
                 } catch (IOException e) {
@@ -30,75 +33,82 @@ public class HTTPServer {
 
         String requestLine = in.readLine();
         try {
-            requestParts = requestLine.split( );
+            requestParts = requestLine.split(" ");
         } catch(NullPointerException e) {
-            System.out.println(Postman sends an initial request without a requestLine, please try again);
+            System.out.println("Postman sends an initial request without a requestLine, please try again");
         }
         String httpMethod = requestParts[0];
         String url = requestParts[1];
 
-        if (httpMethod.equals(GET)) {
+        if (httpMethod.equals("GET")) {
             String responseBody = handleGETRequest();
-            if (responseBody.equals(No File)) {
-                out.println(HTTP1.1 200 OK);
-                out.println(Content-Type texthtml);
-                out.println(Content-Length  + fileLength);
-                out.println(rn);
+            System.out.println(responseBody);
+            if (responseBody.equals("")) {
+                out.println("HTTP/1.1 404 Not Found");
+                out.println("Content-Type: text/plain");
+                out.println("\r\n");
+                out.println("404 Not Found");
+            } else if (responseBody.equals("jpg")) {
+                out.println("HTTP/1.1 200 OK");
+                out.println("Content-Type: image/jpeg");
+                out.println("Content-Length: " + fileLength);
+                out.println("\r\n");
+                out.println(image);
+            }
+            else {
+                out.println("HTTP/1.1 200 OK");
+                out.println("Content-Type: text/html");
+                out.println("Content-Length: " + (fileLength + 2));
+                out.println("\r\n");
                 out.println(responseBody);
-            } else {
-                 Return a 404 error for any other path
-                out.println(HTTP1.1 404 Not Found);
-                out.println(Content-Type textplain);
-                out.println(rn);
-                out.println(404 Not Found);
             }
-        } else if (httpMethod.equals(DELETE)) {
+        } else if (httpMethod.equals("DELETE")) {
             String responseBody = handleDELETERequest();
-            if (responseBody.equals(No File)) {
-                out.println(HTTP1.1 200 OK);
-                out.println(Content-Type textHTTP);
-                out.println(rn);
-                out.println(Content Deleted);
+            if (responseBody.equals("No File")) {
+                out.println("HTTP/1.1 200 OK");
+                out.println("Content-Type: text/HTTP");
+                out.println("\r\n");
+                out.println("Content Deleted");
             } else {
-                out.println(HTTP1.1 404 Not Found);
-                out.println(Content-Type textplain);
-                out.println(rn);
-                out.println(404 Not Found);
+                out.println("HTTP/1.1 404 Not Found");
+                out.println("Content-Type: text/plain");
+                out.println("\r\n");
+                out.println("404 Not Found");
             }
-        } else if (httpMethod.equals(POST)) {
+        } else if (httpMethod.equals("POST")) {
             String result = handlePOSTRequest();
-            if (result.equals(X)) {
-                out.println(HTTP1.1 404 Not Found);
-                out.println(Content-Type textplain);
-                out.println(rn);
-                out.println(404 Not Found);
+            if (result.equals("X")) {
+                out.println("HTTP/1.1 404 Not Found");
+                out.println("Content-Type: text/plain");
+                out.println("\r\n");
+                out.println("404 Not Found");
             } else {
-                out.println(HTTP1.1 200 OK);
-                out.println(Content-Type textHTTP);
-                out.println(rn);
-                out.println(Content Appended);
+                out.println("HTTP/1.1 200 OK");
+                out.println("Content-Type: text/HTTP");
+                out.println("\r\n");
+                out.println("Content Appended");
             }
-        } else if (httpMethod.equals(PUT)) {
+        } else if (httpMethod.equals("PUT")) {
             String result = handlePUTRequest();
-            if (result == X) {
-                out.println(HTTP1.1 308 Not Modified);
-                out.println(Content-Type textplain);
-                out.println(rn);
-                out.println(308 Not Modified);
+            if (result == "X") {
+                out.println("HTTP/1.1 308 Not Modified");
+                out.println("Content-Type: text/plain");
+                out.println("\r\n");
+                out.println("308 Not Modified");
             } else {
-                out.println(HTTP1.1 200 OK);
-                out.println(Content-Type textHTTP);
-                out.println(rn);
-                out.println(Content Created or Replaced);
+                out.println("HTTP/1.1 200 OK");
+                out.println("Content-Type: text/HTTP");
+                out.println("\r\n");
+                out.println("Content Created or Replaced");
             }
         }
-         else {
-             Return a 405 error for any other HTTP method
-            out.println(HTTP1.1 405 Method Not Allowed);
-            out.println(Content-Type textplain);
-            out.println(rn);
-            out.println(405 Method Not Allowed);
-        }
+         /*else {
+            // Return a 405 error for any other HTTP method
+            out.println("HTTP/1.1 405 Method Not Allowed");
+            out.println("Content-Type: text/plain");
+            out.println("\r\n");
+            out.println("405 Method Not Allowed");
+        }*/
 
         in.close();
         out.close();
@@ -106,51 +116,54 @@ public class HTTPServer {
     }
 
     private static String handleGETRequest() throws IOException {
-        String file1 = ;
+        String file1 = "";
         String url = requestParts[1];
-        String[] headerParts = url.split();
+        String[] headerParts = url.split("/");
         String fileRequest = headerParts[headerParts.length - 1];
-        File getRequest = new File(CUserswyattIdeaProjectspracticeHTTPServersrcmainjavaorgexample + fileRequest);
-        if (getRequest.exists() && fileRequest.contains(.txt)) {
+        String pathName = "C:\\Users\\wyatt\\IdeaProjects\\practice\\HTTPServer\\src\\main\\java\\org\\example\\" + fileRequest;
+        File getRequest = new File("C:\\Users\\wyatt\\IdeaProjects\\practice\\HTTPServer\\src\\main\\java\\org\\example\\exampleski.jpg");
+        if (getRequest.exists() && fileRequest.contains(".txt")) {
             FileInputStream inFile = new FileInputStream(getRequest);
             fileLength = (int) getRequest.length();
             System.out.println(fileLength);
             byte Bytes[] = new byte[fileLength];
-            System.out.println(File size is  + inFile.read(Bytes));
+            System.out.println("File size is: " + inFile.read(Bytes));
             file1 = new String(Bytes);
-            System.out.println(File content isn + file1);
+            System.out.println("File content is:\n" + file1);
             inFile.close();
-        } else {
-            file1 = No File;
+            return file1;
+        } else if (getRequest.exists() && fileRequest.contains(".jpg")) {
+            image = ImageIO.read(new File(pathName));
+            return file1 = "jpg";
         }
         return file1;
     }
 
     private static String handleDELETERequest() {
-        String file1 = ;
+        String file1 = "";
         String url = requestParts[1];
-        String[] headerParts = url.split();
+        String[] headerParts = url.split("/");
         String fileRequest = headerParts[headerParts.length - 1];
-        File getRequest = new File(CUserswyattIdeaProjectspracticeHTTPServersrcmainjavaorgexample + fileRequest);
+        File getRequest = new File("C:\\Users\\wyatt\\IdeaProjects\\practice\\HTTPServer\\src\\main\\java\\org\\example\\" + fileRequest);
         if (getRequest.delete()) {
-            System.out.println(Deleted request File);
+            System.out.println("Deleted request File");
         } else {
-            return file1 = No File;
+            return file1 = "No File";
         }
-        return file1 = Deleted File;
+        return file1 = "Deleted File";
     }
 
     private static String handlePOSTRequest() throws IOException {
-        String result = ;
+        String result = "";
         String url = requestParts[1];
-        String[] headerParts = url.split();
+        String[] headerParts = url.split("/");
         String fileRequest = headerParts[headerParts.length - 1];
-        File getRequest = new File(CUserswyattIdeaProjectspracticeHTTPServersrcmainjavaorgexample + fileRequest);
+        File getRequest = new File("C:\\Users\\wyatt\\IdeaProjects\\practice\\HTTPServer\\src\\main\\java\\org\\example\\" + fileRequest);
         if (getRequest.exists()) {
             int contentLength = 0;
                 for (String line = in.readLine(); !line.isEmpty(); line = in.readLine()) {
-                    if (line.startsWith(Content-Length )) {
-                        contentLength = Integer.parseInt(line.substring(Content-Length .length()));
+                    if (line.startsWith("Content-Length: ")) {
+                        contentLength = Integer.parseInt(line.substring("Content-Length: ".length()));
                     }
                 }
             char[] buffer = new char[contentLength];
@@ -162,21 +175,21 @@ public class HTTPServer {
             outFile.write(postData);
             outFile.close();
         } else {
-            result = X;
+            result = "X";
         }
         return result;
     }
 
     private static String handlePUTRequest() throws IOException {
-        String result = ;
+        String result = "";
         String url = requestParts[1];
-        String[] headerParts = url.split();
+        String[] headerParts = url.split("/");
         String fileRequest = headerParts[headerParts.length - 1];
-        File getRequest = new File(CUserswyattIdeaProjectspracticeHTTPServersrcmainjavaorgexample + fileRequest);
+        File getRequest = new File("C:\\Users\\wyatt\\IdeaProjects\\practice\\HTTPServer\\src\\main\\java\\org\\example\\" + fileRequest);
             int contentLength = 0;
             for (String line = in.readLine(); !line.isEmpty(); line = in.readLine()) {
-                if (line.startsWith(Content-Length )) {
-                    contentLength = Integer.parseInt(line.substring(Content-Length .length()));
+                if (line.startsWith("Content-Length: ")) {
+                    contentLength = Integer.parseInt(line.substring("Content-Length: ".length()));
                 }
             }
             char[] buffer = new char[contentLength];
@@ -189,7 +202,7 @@ public class HTTPServer {
 
                 out.close();
             } catch (NullPointerException e){
-                result = X; sparks response code
+                result = "X"; //sparks response code
         }
         return result;
     }
